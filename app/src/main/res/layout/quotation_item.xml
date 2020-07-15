@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        app:cardCornerRadius="5dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/crypto_name"
+                style="@style/TextLargeTheme"
+                android:layout_centerVertical="true"
+                android:hint="@string/crypto_name_hint"/>
+
+            <TextView
+                android:id="@+id/crypto_sell_price"
+                style="@style/TextLargeTheme"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="100dp"
+                android:hint="@string/crypto_sell_hint"
+                android:gravity="right"/>
+
+            <TextView
+                android:id="@+id/crypto_sell_percent"
+                style="@style/TextLightTheme"
+                android:layout_alignParentRight="true"
+                android:layout_below="@id/crypto_sell_price"
+                android:layout_marginRight="100dp"
+                android:hint="@string/crypto_persent_hint"
+                android:gravity="right"/>
+
+            <TextView
+                android:id="@+id/crypto_buy_price"
+                style="@style/TextLargeTheme"
+                android:layout_alignParentRight="true"
+                android:hint="@string/crypto_buy_hint"
+                android:gravity="right"/>
+
+            <TextView
+                android:id="@+id/crypto_buy_percent"
+                style="@style/TextLightTheme"
+                android:layout_alignParentRight="true"
+                android:layout_below="@id/crypto_buy_price"
+                android:hint="@string/crypto_persent_hint"
+                android:gravity="right"/>
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+
+</RelativeLayout>

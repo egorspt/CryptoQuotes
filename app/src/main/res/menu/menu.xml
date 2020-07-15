@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/usd"
+        android:title="USD"
+        app:showAsAction="always"
+        app:actionViewClass="com.google.android.material.button.MaterialButton"
+        />
+    <item android:id="@+id/eur"
+        android:title="EUR"
+        app:showAsAction="always"
+        app:actionViewClass="com.google.android.material.button.MaterialButton"/>
+</menu>

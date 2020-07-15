@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">CryptoQuotes</string>
+    <string name="crypto_name_hint">BTC</string>
+    <string name="crypto_buy_hint">9456.55</string>
+    <string name="crypto_sell_hint">9461.95</string>
+    <string name="crypto_persent_hint">0.56%</string>
+</resources>
