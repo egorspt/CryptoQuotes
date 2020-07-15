@@ -1,12 +1,14 @@
 package com.app.cryptoquotes
 
 import android.os.Bundle
+import android.view.View
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.google.gson.Gson
 import com.koushikdutta.async.http.AsyncHttpClient
 import com.koushikdutta.async.http.AsyncHttpClient.WebSocketConnectCallback
@@ -28,13 +30,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var wbAndroidAsync: WebSocket
     private lateinit var wbNV: com.neovisionaries.ws.client.WebSocket
 
+    val clickListener = View.OnClickListener { view ->
+        lateinit var currency: String
+        when ((view as MaterialButton).text) {
+            "usd" -> currency = Constants().CURRENCIES_USD
+            "eur" -> currency = Constants().CURRENCIES_EUR
+            "gbp" -> currency = Constants().CURRENCIES_GBP
+            "btc" -> currency = Constants().CURRENCIES_BTC
+        }
+        newWebSocket(currency)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        for (currency: String in Constants().CURRENCIES_USD.split(",")) {
-            quotes.add(Quotation(currency.replace("[\" ]".toRegex(), ""), 0.0, 0.0, 0.0, 0.0))
-        }
+        findViewById<MaterialButton>(R.id.usd).setOnClickListener(clickListener)
+        findViewById<MaterialButton>(R.id.eur).setOnClickListener(clickListener)
+        findViewById<MaterialButton>(R.id.gbp).setOnClickListener(clickListener)
+        findViewById<MaterialButton>(R.id.btc).setOnClickListener(clickListener)
+        findViewById<ImageView>(R.id.choice_lib).setOnClickListener({ view ->  choiceLib()})
 
         rv = findViewById(R.id.rv)
         rv?.layoutManager = LinearLayoutManager(this)
@@ -49,10 +64,16 @@ class MainActivity : AppCompatActivity() {
                 arrayOf("OkHttp", "AndroidAsync", "NeoVisionaries"),
                 -1) { dialog, i ->
                 thread(start = true) {
+                    quotes.clear()
+                    for (currency: String in Constants().CURRENCIES_USD.split(",")) {
+                        quotes.add(Quotation(currency.replace("[\" ]".toRegex(), ""), 0.0, 0.0, 0.0, 0.0))
+                    }
+
+                    closeWebSocket()
                     when(i) {
-                        0 -> okhttp()
-                        1 -> androidAsync()
-                        2 -> nvWebsocketClient()
+                        0 -> okhttp(Constants().CURRENCIES_USD)
+                        1 -> androidAsync(Constants().CURRENCIES_USD)
+                        2 -> nvWebsocketClient(Constants().CURRENCIES_USD)
                     }
                     Thread.sleep(1000)
                     dialog.cancel()
@@ -88,13 +109,13 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun okhttp() {
+    private fun okhttp(currency: String) {
         val client = OkHttpClient()
         val request: Request = Request.Builder().url("wss://ws-feed.gdax.com").build()
         wbOkHttp = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
                 webSocket.send(
-                    "{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}"
+                    "{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + currency + "] }]}"
                 )
             }
 
@@ -114,7 +135,7 @@ class MainActivity : AppCompatActivity() {
         client.dispatcher().executorService().shutdown()
     }
 
-    private fun androidAsync() {
+    private fun androidAsync(currency: String) {
         AsyncHttpClient.getDefaultInstance()
             .websocket("wss://ws-feed.gdax.com", "wss", object : WebSocketConnectCallback {
                 override fun onCompleted(ex: Exception?, webSocket: WebSocket) {
@@ -123,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                         return
                     }
                     wbAndroidAsync = webSocket
-                    webSocket.send("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
+                    webSocket.send("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + currency + "] }]}")
                     webSocket.setStringCallback(object : com.koushikdutta.async.http.WebSocket.StringCallback {
                         override fun onStringAvailable(s: String) {
                             output(Gson().fromJson(s, PojoQuatation::class.java))
@@ -134,7 +155,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun nvWebsocketClient() {
+    private fun nvWebsocketClient(currency: String) {
         val ws: com.neovisionaries.ws.client.WebSocket = WebSocketFactory().createSocket("wss://ws-feed.gdax.com")
         wbNV = ws
 
@@ -154,18 +175,37 @@ class MainActivity : AppCompatActivity() {
 
         thread(start = true) {
             ws.connect()
-            ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
+            ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + currency + "] }]}")
+        }
+    }
+
+    private fun newWebSocket(currency: String) {
+        quotes.clear()
+        for (currency: String in currency.split(",")) {
+            quotes.add(Quotation(currency.replace("[\" ]".toRegex(), ""), 0.0, 0.0, 0.0, 0.0))
+        }
+
+        if(this::wbOkHttp.isInitialized) {
+            okhttp(currency)
+        }
+
+        if(this::wbAndroidAsync.isInitialized) {
+            wbAndroidAsync.close()
+            androidAsync(currency)
+        }
+
+        if(this::wbNV.isInitialized) {
+            wbNV.disconnect()
+            nvWebsocketClient(currency)
         }
     }
 
     private fun closeWebSocket() {
-        if(wbOkHttp != null)
-            wbOkHttp.cancel()
 
-        if(wbAndroidAsync != null)
+        if(this::wbAndroidAsync.isInitialized)
             wbAndroidAsync.close()
 
-        if(wbNV != null)
+        if(this::wbNV.isInitialized)
             wbNV.disconnect()
     }
 
