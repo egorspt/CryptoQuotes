@@ -7,29 +7,87 @@
     tools:context=".MainActivity"
     android:orientation="vertical">
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:layout_editor_absoluteX="1dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/usd"
+            style="@style/ButtonCurrencyTheme"
+            android:layout_marginTop="8dp"
+            android:text="usd"
+            android:theme="@style/Theme.MaterialComponents"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toLeftOf="@+id/eur"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/ButtonCurrencyTheme"
+            android:theme="@style/Theme.MaterialComponents"
+            android:id="@+id/eur"
+            android:text="eur"
+            app:layout_constraintLeft_toRightOf="@id/usd"
+            app:layout_constraintRight_toLeftOf="@+id/gbp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/ButtonCurrencyTheme"
+            android:theme="@style/Theme.MaterialComponents"
+            android:id="@+id/gbp"
+            android:text="gbp"
+            app:layout_constraintLeft_toRightOf="@id/eur"
+            app:layout_constraintRight_toLeftOf="@id/btc"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/ButtonCurrencyTheme"
+            android:theme="@style/Theme.MaterialComponents"
+            android:id="@+id/btc"
+            android:text="btc"
+            app:layout_constraintLeft_toRightOf="@id/gbp"
+            app:layout_constraintRight_toLeftOf="@+id/choice_lib"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageView
+            android:id="@+id/choice_lib"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:src="@drawable/ic_more_vert"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toRightOf="@id/btc"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginRight="10dp"
         android:layout_marginLeft="10dp"
-        android:layout_marginTop="5dp">
+        android:layout_marginTop="5dp"
+        android:layout_marginRight="10dp">
 
         <TextView
             android:id="@+id/text"
             style="@style/TextLightTheme"
-            android:text="Currency"
-            android:layout_alignParentLeft="true"/>
+            android:layout_alignParentLeft="true"
+            android:text="Currency" />
 
         <TextView
             style="@style/TextLightTheme"
-            android:text="Sell"
             android:layout_alignParentRight="true"
-            android:layout_marginRight="100dp"/>
+            android:layout_marginRight="100dp"
+            android:text="Sell" />
 
         <TextView
             style="@style/TextLightTheme"
-            android:text="Buy"
-            android:layout_alignParentRight="true"/>
+            android:layout_alignParentRight="true"
+            android:text="Buy" />
     </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
