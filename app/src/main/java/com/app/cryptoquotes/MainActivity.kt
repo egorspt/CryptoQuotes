@@ -3,20 +3,23 @@ package com.app.cryptoquotes
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.koushikdutta.async.http.AsyncHttpClient
 import com.koushikdutta.async.http.AsyncHttpClient.WebSocketConnectCallback
 import com.koushikdutta.async.http.WebSocket
-import com.neovisionaries.ws.client.WebSocketAdapter
-import com.neovisionaries.ws.client.WebSocketFactory
+import com.neovisionaries.ws.client.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocketListener
+import kotlin.concurrent.thread
 
 
 class MainActivity : AppCompatActivity() {
@@ -36,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         rv = findViewById(R.id.rv)
         rv?.layoutManager = LinearLayoutManager(this)
         rv?.adapter = adapter
-        nvWebsocketClient()
+        choiceLib()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -57,12 +60,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun start() {
-        val client = OkHttpClient()
-        val request: Request = Request.Builder().url("wss://ws-feed.gdax.com").build()
-        val listener: EchoWebSocketListener = EchoWebSocketListener()
-        val ws = client.newWebSocket(request, listener)
-        client.dispatcher().executorService().shutdown()
+    private fun choiceLib() {
+        AlertDialog.Builder(this, R.style.MyDialogTheme)
+            .setTitle("Choice lib")
+            .setSingleChoiceItems(
+                arrayOf("okHttp", "AndroidAsync", "nv"),
+                -1) { dialog, i ->
+                thread(start = true) {
+                    when(i) {
+                        0 -> okhttp()
+                        1 -> AndroidAsync()
+                        2 -> nvWebsocketClient()
+                    }
+                    Thread.sleep(1000)
+                    dialog.cancel()
+                }
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun output(pojo: PojoQuatation) {
@@ -92,26 +107,31 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private inner class EchoWebSocketListener : WebSocketListener() {
-        override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
-            webSocket.send(
-                "{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}"
-            )
-            //webSocket.close(NORMAL_CLOSURE_STATUS, "Goodbye !");
-        }
+    private fun okhttp() {
+        val client = OkHttpClient()
+        val request: Request = Request.Builder().url("wss://ws-feed.gdax.com").build()
+        val ws = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
+                webSocket.send(
+                    "{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}"
+                )
+                //webSocket.close(NORMAL_CLOSURE_STATUS, "Goodbye !");
+            }
 
-        override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
-            output(Gson().fromJson(text, PojoQuatation::class.java))
-        }
+            override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                output(Gson().fromJson(text, PojoQuatation::class.java))
+            }
 
-        override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
-            webSocket.close(Constants().NORMAL_CLOSURE_STATUS, null)
-            //output("Closing : $code / $reason")
-        }
+            override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
+                webSocket.close(Constants().NORMAL_CLOSURE_STATUS, null)
+                //output("Closing : $code / $reason")
+            }
 
-        override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response) {
-            //output("Error : " + t.message)
-        }
+            override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response) {
+                //output("Error : " + t.message)
+            }
+        })
+        client.dispatcher().executorService().shutdown()
     }
 
     private fun AndroidAsync() {
@@ -134,16 +154,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun nvWebsocketClient() {
-        val ws: com.neovisionaries.ws.client.WebSocket = WebSocketFactory().createSocket("wss://ws-feed.gdax.com")
-        ws.addListener(object: WebSocketAdapter() {
-            override fun onTextMessage(webSocket: com.neovisionaries.ws.client.WebSocket, message: String){
-                var m = message
+        val ws: com.neovisionaries.ws.client.WebSocket =
+            WebSocketFactory().createSocket("wss://ws-feed.gdax.com")
+        ws.addListener(object : WebSocketAdapter() {
+            override fun onTextMessage(
+                webSocket: com.neovisionaries.ws.client.WebSocket,
+                message: String
+            ) {
+                output(Gson().fromJson(message, PojoQuatation::class.java))
             }
-        });
-        ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
+        })
+        thread(start = true) {
+            try {
+                ws.connect()
+                ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        "Пора покормить кота!", Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } catch (e: Exception) {
+                var m = e.message
+            }
+
+        }
 
     }
-
 
 
 }

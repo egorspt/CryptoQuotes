@@ -5,4 +5,6 @@
     <color name="colorAccent">#03DAC5</color>
 
     <color name="textColor">#FAFAFA</color>
+    <color name="textColorDialogHeader">#EEEEEE</color>
+    <color name="textColorDialog">#E0E0E0</color>
 </resources>
