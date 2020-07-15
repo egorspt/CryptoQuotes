@@ -1,15 +1,12 @@
 package com.app.cryptoquotes
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.koushikdutta.async.http.AsyncHttpClient
 import com.koushikdutta.async.http.AsyncHttpClient.WebSocketConnectCallback
@@ -26,7 +23,10 @@ class MainActivity : AppCompatActivity() {
     private var rv: RecyclerView? = null
     private var quotes = arrayListOf<Quotation>()
     private var adapter: QuotesAdapter = QuotesAdapter(quotes)
-    private var toolbar: Toolbar? = null
+
+    private lateinit var wbOkHttp: okhttp3.WebSocket
+    private lateinit var wbAndroidAsync: WebSocket
+    private lateinit var wbNV: com.neovisionaries.ws.client.WebSocket
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,34 +42,16 @@ class MainActivity : AppCompatActivity() {
         choiceLib()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        val inflater = menuInflater
-        inflater.inflate(R.menu.menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.getItemId()) {
-            R.id.usd -> {
-                true
-            }
-            R.id.eur -> {
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     private fun choiceLib() {
         AlertDialog.Builder(this, R.style.MyDialogTheme)
-            .setTitle("Choice lib")
+            .setTitle("Choose WebSocket client")
             .setSingleChoiceItems(
-                arrayOf("okHttp", "AndroidAsync", "nv"),
+                arrayOf("OkHttp", "AndroidAsync", "NeoVisionaries"),
                 -1) { dialog, i ->
                 thread(start = true) {
                     when(i) {
                         0 -> okhttp()
-                        1 -> AndroidAsync()
+                        1 -> androidAsync()
                         2 -> nvWebsocketClient()
                     }
                     Thread.sleep(1000)
@@ -98,7 +80,6 @@ class MainActivity : AppCompatActivity() {
             quo?.sellPrice = pojo.price
         }
 
-        val index = quotes.indexOf(quo)
         var q = quotes.find { it.cryptoName.equals(pojo.product_id) }
         if (q != null)
 
@@ -110,12 +91,11 @@ class MainActivity : AppCompatActivity() {
     private fun okhttp() {
         val client = OkHttpClient()
         val request: Request = Request.Builder().url("wss://ws-feed.gdax.com").build()
-        val ws = client.newWebSocket(request, object : WebSocketListener() {
+        wbOkHttp = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) {
                 webSocket.send(
                     "{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}"
                 )
-                //webSocket.close(NORMAL_CLOSURE_STATUS, "Goodbye !");
             }
 
             override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
@@ -124,17 +104,17 @@ class MainActivity : AppCompatActivity() {
 
             override fun onClosing(webSocket: okhttp3.WebSocket, code: Int, reason: String) {
                 webSocket.close(Constants().NORMAL_CLOSURE_STATUS, null)
-                //output("Closing : $code / $reason")
+                Toast.makeText(this@MainActivity, "Web socket is close", Toast.LENGTH_SHORT).show()
             }
 
             override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response) {
-                //output("Error : " + t.message)
+                Toast.makeText(this@MainActivity, "Error installing web socket", Toast.LENGTH_LONG).show()
             }
         })
         client.dispatcher().executorService().shutdown()
     }
 
-    private fun AndroidAsync() {
+    private fun androidAsync() {
         AsyncHttpClient.getDefaultInstance()
             .websocket("wss://ws-feed.gdax.com", "wss", object : WebSocketConnectCallback {
                 override fun onCompleted(ex: Exception?, webSocket: WebSocket) {
@@ -142,46 +122,51 @@ class MainActivity : AppCompatActivity() {
                         ex.printStackTrace()
                         return
                     }
+                    wbAndroidAsync = webSocket
                     webSocket.send("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
-                    webSocket.setStringCallback(object :
-                        com.koushikdutta.async.http.WebSocket.StringCallback {
+                    webSocket.setStringCallback(object : com.koushikdutta.async.http.WebSocket.StringCallback {
                         override fun onStringAvailable(s: String) {
                             output(Gson().fromJson(s, PojoQuatation::class.java))
                         }
                     })
                 }
             })
+
     }
 
     private fun nvWebsocketClient() {
-        val ws: com.neovisionaries.ws.client.WebSocket =
-            WebSocketFactory().createSocket("wss://ws-feed.gdax.com")
+        val ws: com.neovisionaries.ws.client.WebSocket = WebSocketFactory().createSocket("wss://ws-feed.gdax.com")
+        wbNV = ws
+
         ws.addListener(object : WebSocketAdapter() {
-            override fun onTextMessage(
-                webSocket: com.neovisionaries.ws.client.WebSocket,
-                message: String
-            ) {
+            override fun onTextMessage(webSocket: com.neovisionaries.ws.client.WebSocket, message: String) {
                 output(Gson().fromJson(message, PojoQuatation::class.java))
             }
-        })
-        thread(start = true) {
-            try {
-                ws.connect()
-                ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
-                runOnUiThread {
-                    Toast.makeText(
-                        this,
-                        "Пора покормить кота!", Toast.LENGTH_SHORT
-                    ).show()
-                }
 
-            } catch (e: Exception) {
-                var m = e.message
+            override fun onConnectError(websocket: com.neovisionaries.ws.client.WebSocket?, exception: WebSocketException?) {
+                Toast.makeText(this@MainActivity, "Error installing web socket", Toast.LENGTH_LONG).show()
             }
 
-        }
+            override fun onCloseFrame(websocket: com.neovisionaries.ws.client.WebSocket?, frame: WebSocketFrame?) {
+                Toast.makeText(this@MainActivity, "Web socket is close", Toast.LENGTH_SHORT).show()
+            }
+        })
 
+        thread(start = true) {
+            ws.connect()
+            ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
+        }
     }
 
+    private fun closeWebSocket() {
+        if(wbOkHttp != null)
+            wbOkHttp.cancel()
+
+        if(wbAndroidAsync != null)
+            wbAndroidAsync.close()
+
+        if(wbNV != null)
+            wbNV.disconnect()
+    }
 
 }
