@@ -138,7 +138,6 @@ class MainActivity : AppCompatActivity() {
         ws.addListener(object: WebSocketAdapter() {
             override fun onTextMessage(webSocket: com.neovisionaries.ws.client.WebSocket, message: String){
                 var m = message
-
             }
         });
         ws.sendText("{\"type\": \"subscribe\", \"channels\": [{ \"name\": \"ticker\", \"product_ids\": [" + Constants().CURRENCIES_USD + ", " + Constants().CURRENCIES_EUR + "] }]}")
